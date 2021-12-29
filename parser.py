@@ -67,7 +67,7 @@ class Parser:
                 end_date = event_date[1]
             else:
                 start_date = end_date = event_date
-            if start_date >= date.today() and end_date - date.today() >= timedelta(days=event_interval):
+            if start_date >= date.today() and end_date - date.today() <= timedelta(days=event_interval):
                 return events
             tags = [tag.text for tag in event_data.find('div', {'class':'more'}).find_all('a')]
             if any(item in tags for item in preferred_tags):
