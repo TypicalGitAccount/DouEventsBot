@@ -199,7 +199,7 @@ def show_events(message):
     db.update('user_data', 'last_events_refresh', str(datetime.now().date()), chat_id=message.from_user.id)
     db.disconnect()
     for event in Parser().parse_events(location, tags, event_interval):
-        bot.send_photo(chat_id=message.from_user.id, photo=event.img, caption=event.to_user(), disable_notification=True)
+        bot.send_message(chat_id=message.from_user.id, text=event.to_user(), disable_notification=True)
 
 @bot.message_handler(content_types=['text'],  func=lambda message: message.text == 'add to gcalendar')
 def add_to_gcalendar(message):
@@ -209,12 +209,13 @@ def add_to_gcalendar(message):
         db = DBConnection()
         db.connect()
         event = Event.from_text_to_gcalendar(message.reply_to_message.text)
+        print(event)
         event_in_gcalendar = db.record_exists('events_in_gcalendar', 'name', chat_id=message.from_user.id, name=event["summary"],
         location=event["location"], description=event["description"], start_date_time=event["start"]["dateTime"], end_date_time=event["end"]["dateTime"])
         if event_in_gcalendar:
             bot.send_message(chat_id=message.from_user.id, text='Event is in your gcalendar already!')
         else:
-            event_id = Gcalendar.set_event(event)
+            event_id = Gcalendar(environ['GCALENDAR_ID']).set_event(event)
             db.insert('events_in_gcalendar', ['name', 'location', 'description', 'start_date_time', 'end_date_time', 'chat_id', 'event_id'],
             [event["summary"], event["summary"], event["description"], event["start"]["dateTime"], event["end"]["dateTime"], message.from_user.id, event_id])
             bot.send_message(chat_id=message.from_user.id, text='Event succesfully added')
@@ -234,7 +235,7 @@ def remove_from_gcalendar(message):
         event_in_gcalendar = db.select('events_in_gcalendar', ['event_id'], chat_id=message.from_user.id)
         if db.record_exists('events_in_gcalendar', 'name', chat_id=message.from_user.id, name=event["summary"], start_date_time=start,
         end_date_time=end):
-            Gcalendar.delete_event(event_in_gcalendar[0][0])
+            Gcalendar(environ['GCALENDAR_ID']).delete_event(event_in_gcalendar[0][0])
             db.delete('events_in_gcalendar', event_id=event_in_gcalendar[0][0])
             bot.send_message(chat_id=message.from_user.id, text='Event succesfully removed')
         else:
@@ -299,3 +300,4 @@ def turn_off_autorefresh(message):
 
 if __name__ == "__main__":
     server.run(host="0.0.0.0", port=8443, ssl_context=('webhook_cert.pem', 'webhook_key.key'))
+    
